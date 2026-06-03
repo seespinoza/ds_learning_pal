@@ -1,22 +1,34 @@
 # DS Learning Pal
 
-A locally-hosted, graph-based knowledge wiki for building and maintaining a personal knowledge base of data science, machine learning, and AI engineering concepts. Inspired by [Karpathy's LLM wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+A locally-hosted, graph-based knowledge wiki for building and maintaining a personal knowledge base of
+data science, machine learning, and AI engineering concepts.
+Inspired by [Karpathy's LLM wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 
-The core idea: ingest raw learning materials (papers, articles, videos, notes), let an LLM extract structured knowledge from them, and store everything as a typed graph of concepts, algorithms, models, and their relationships. The graph grows with you — every new source deepens the existing structure rather than piling into an unorganized folder. A second agent periodically lints the graph for contradictions, stale claims, and orphan nodes.
+The core idea: ingest raw learning materials (papers, articles, videos, notes), let an LLM extract
+structured knowledge from them, and store everything as a typed graph of concepts, algorithms, models,
+and their relationships. The graph grows with you — every new source deepens the existing structure
+rather than piling into an unorganized folder. A second agent periodically lints the graph for
+contradictions, stale claims, and orphan nodes.
 
 ---
 
 ## Graph Schema
 
-The knowledge graph is built around a fixed set of node labels and typed relationships. Decision rules specify exactly when each edge type applies, keeping the graph consistent as it grows.
+The knowledge graph is built around a fixed set of node labels and typed relationships.
+Decision rules specify exactly when each edge type applies, keeping the graph consistent as it grows.
 
-**Relationships**
+**Hierarchical Relationships**
 
 | Edge | Direction | Meaning |
 |---|---|---|
 | `SUBCLASS_OF` | A → B | A is a more specific category of B |
 | `INSTANCE_OF` | A → B | A is a specific member of class B |
 | `BELONGS_TO` | A → B | A is situated within a field or discipline; B must be a `Domain` node |
+
+**Associative Relationships**
+
+| Edge | Direction | Meaning |
+|---|---|---|
 | `ADDRESSES` | A → B | A is a solution or mitigation for B |
 | `PART_OF` | A → B | A is a component of B |
 | `USED_ON` | A → B | A operates on or is applied to B |
@@ -48,7 +60,20 @@ The knowledge graph is built around a fixed set of node labels and typed relatio
 
 ## Workflow
 
-The wiki operates across three layers: immutable **raw sources** (your uploaded files), the **wiki** (LLM-maintained markdown), and a **schema** document that governs how the LLM maintains everything. Three main operations drive the system: **Ingest** (adding new sources and updating the graph), **Query** (asking questions answered by traversing the graph), and **Lint** (health checks for contradictions, orphans, and stale edges). Two special files — `index.md` and `log.md` — let the LLM navigate and audit the wiki as it scales.
+The wiki operates across three layers:
+
+- **Raw sources** — immutable uploaded files; the LLM reads from them but never modifies them
+- **Wiki** — LLM-maintained markdown files; summaries, entity pages, cross-references
+- **Schema** — configuration document governing how the LLM maintains the wiki
+
+Three main operations drive the system:
+
+- **Ingest** — add a new source file or prompt; LLM creates or updates nodes and relationships
+- **Query** — ask natural language questions; LLM traverses the graph to answer them
+- **Lint** — health checks for contradictions, orphan nodes, and stale edges
+
+Two special files help navigation as the wiki scales:
+`index.md` catalogs every node with a one-line summary; `log.md` is an append-only audit trail of all operations.
 
 → [Workflow](docs/workflow.md)
 
@@ -56,7 +81,23 @@ The wiki operates across three layers: immutable **raw sources** (your uploaded 
 
 ## Agent Architecture
 
-Two LangGraph agents power the system, both backed by Claude Haiku 4.5 via the Anthropic API. The **Ingest Agent** parses a source file or prompt, extracts candidate nodes and relationships, deduplicates against `index.md`, and returns proposals for human review before anything is written to the graph. The **Lint Agent** runs a map-reduce scan — checking each node for internal consistency and relationship validity, then doing a cross-node pass for contradictions and duplicates — and returns a structured report without auto-applying any fixes. Shared tools cover PDF extraction, website-to-markdown conversion, and OCR.
+Two LangGraph agents power the system, both backed by Claude Haiku 4.5 via the Anthropic API.
+
+**Ingest Agent** — triggered by `POST /ingest` with a file path or prompt:
+
+1. Parse the input (PDF, URL, image, or plain text)
+2. Extract candidate nodes and relationships
+3. Deduplicate against `index.md`
+4. Return proposals to the UI for human review
+5. Write confirmed proposals to Neo4j; update `index.md` and `log.md`
+
+**Lint Agent** — triggered by `POST /lint` on demand or via cron:
+
+1. Map phase: for each node, fetch from Neo4j and check internal consistency and relationship validity
+2. Reduce phase: cross-node pass for contradictions, orphans, and duplicates
+3. Return a structured report — issues only, no auto-fixes
+
+Shared tools cover PDF extraction (`pypdf`), website-to-markdown conversion (`r.jina.ai`), and OCR (`easyocr`).
 
 → [Agent Architecture](docs/agent.md)
 
@@ -64,7 +105,15 @@ Two LangGraph agents power the system, both backed by Claude Haiku 4.5 via the A
 
 ## Architecture
 
-The system is a three-layer stack running entirely on local hardware. The **data layer** pairs Neo4j (knowledge graph) with MongoDB (raw source file storage via GridFS). The **app layer** is a FastAPI backend that owns all reads and writes to both databases and exposes REST endpoints for nodes, relationships, sources, wiki files, and agent triggers. The **presentation layer** is a React frontend with a force-directed graph explorer, a node editor, an ingest panel with proposal review, and a lint panel. Agents run server-side inside the FastAPI process, invoked through `/ingest` and `/lint`.
+The system is a three-layer stack running entirely on local hardware:
+
+- **Data layer** — Neo4j stores the knowledge graph; MongoDB stores raw source files via GridFS
+- **App layer** — FastAPI backend; single access point for all reads and writes to both databases;
+  exposes REST endpoints for nodes, relationships, sources, wiki files, and agent triggers
+- **Presentation layer** — React frontend with a force-directed graph explorer, node editor,
+  ingest panel with proposal review, and lint panel
+
+Agents run server-side inside the FastAPI process, invoked through `/ingest` and `/lint`.
 
 → [Architecture](docs/architecture.md)
 
@@ -72,8 +121,27 @@ The system is a three-layer stack running entirely on local hardware. The **data
 
 ## Implementation Plan
 
-**Phase 1** brings up the full application locally — Neo4j and MongoDB running natively, FastAPI backend with CRUD routers and both agents, JWT-based auth with admin/viewer roles, and a React/Vite frontend. The only external dependency is an Anthropic API key. Build order goes: database connection helpers → CRUD routers → auth → agents → frontend views → local dev wiring.
+**Phase 1 — Local Standup**
 
-**Phase 2** migrates to the cloud with no application code changes — only environment variables swap. Neo4j local → AuraDB, MongoDB local → Atlas, FastAPI → Cloud Run or Azure Container Apps, React → Firebase Hosting or Azure Static Web Apps. GitHub Actions adds CI (lint + tests on PRs) and CD (deploy on merge to `main`).
+Bring up the full application on local hardware. The only external dependency is an Anthropic API key.
+
+Build order:
+1. Database connection helpers (Neo4j + MongoDB)
+2. CRUD routers (nodes, relationships, sources, wiki)
+3. JWT auth with `admin` / `viewer` roles
+4. Ingest and lint agents (LangGraph + Anthropic)
+5. React/Vite frontend
+6. Local dev wiring (`.env`, run order)
+
+**Phase 2 — Cloud Migration**
+
+No application code changes — only environment variables swap:
+
+- Neo4j local → Neo4j AuraDB
+- MongoDB local → MongoDB Atlas
+- FastAPI → Cloud Run or Azure Container Apps
+- React → Firebase Hosting or Azure Static Web Apps
+
+GitHub Actions adds CI (ruff + pytest + eslint on PRs) and CD (deploy on merge to `main`).
 
 → [Implementation Plan](docs/implementation.md)
