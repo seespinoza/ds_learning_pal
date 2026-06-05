@@ -91,80 +91,35 @@ recall    = |correct ∩ proposed| / |correct|
 precision = |correct ∩ proposed| / |proposed|
 ```
 
-Each agent needs its own gold set and has its own additional failure modes worth tracking.
-
 ---
 
 ### Ingest Agent Evals
 
-**Gold set construction:** For each fixture document (PDF, URL, or text snippet), a human annotates the expected nodes and relationships — labels, key properties, and edge types. Store these alongside the fixture as a JSON file.
+**Gold set:** For each fixture document (PDF, URL, or text snippet), annotate the expected nodes and relationships — labels, key properties, and edge types. Store alongside the fixture as a JSON file.
 
 **Recall** — did the agent find everything?
 - Node recall: `nodes_correctly_proposed / nodes_in_gold_set`
 - Relationship recall: `edges_correctly_proposed / edges_in_gold_set`
-- A node counts as "correct" if the label and at least the `summary` property match the gold entry (fuzzy match is fine; exact string equality is too strict).
 
 **Precision** — were the proposals worth reviewing?
-- Node precision: `nodes_in_gold_set ∩ proposed / nodes_proposed`
-- Relationship precision: `edges_in_gold_set ∩ proposed / edges_proposed`
-- Hallucinated nodes (plausible-sounding but not present in the source) are the main precision killer here.
-
-**Additional dimensions:**
-
-| Metric | What it catches |
-|---|---|
-| **Schema compliance rate** | Fraction of proposals that conform to `graph_schema.md` without the user having to edit the type or label. Catches prompt drift. |
-| **Deduplication accuracy** | Precision/recall on the dedup step specifically: did the agent correctly flag candidates that match existing nodes, without false-merging distinct concepts? Requires a fixture where some concepts are already in `index.md`. |
-| **Property completeness** | For confirmed nodes, what fraction of required properties were non-null? Catches shallow extraction that leaves most fields empty. |
-| **User edit rate** | How much did the user change proposals before confirming? Measured as edit distance on `summary` fields. Low edits → high proposal quality. This is observable from `log.md` without a gold set. |
-| **Confirmation rate** | Fraction of proposals the user confirmed vs. discarded. A rough proxy for precision when no gold set exists. |
+- Node precision: `nodes_correctly_proposed / nodes_proposed`
+- Relationship precision: `edges_correctly_proposed / edges_proposed`
 
 ---
 
 ### Lint Agent Evals
 
-**Gold set construction:** Build a set of synthetic graph snapshots with known injected defects. Each fixture is a Neo4j dump (or equivalent JSON) plus a manifest listing every injected issue — node reference, issue type, and severity. Defect types to cover:
-- Unresolved `confidence: low` that has aged past a threshold
-- `summary` that contradicts a connected node's claim
-- Edge type that violates schema decision rules
+Scope: structural issues only — nodes and relationships. Attribute-level checks (e.g. stale `summary`, contradicting claims) are out of scope for now.
+
+**Gold set:** Synthetic graph snapshots with known injected defects. Each fixture is a Neo4j dump (or equivalent JSON) plus a manifest of every injected issue. Defect types to cover:
 - Orphan node (no relationships)
 - Duplicate nodes (same concept, different IDs)
+- Edge type that violates schema decision rules
+- Relationship cycle that violates hierarchy
 
 **Recall** — did the agent surface everything?
 - `issues_found / issues_in_manifest`
-- Track separately for map-phase issues (per-node) vs. reduce-phase issues (cross-node contradictions, duplicates) — they have different LLM calls and different failure modes.
 
-**Precision** — were the findings actionable?
+**Precision** — were the findings genuine?
 - `genuine_issues / issues_reported`
-- A finding is genuine if it maps to an entry in the manifest, or if a human reviewer judges it valid on a clean fixture (no injected defects).
-
-**Additional dimensions:**
-
-| Metric | What it catches |
-|---|---|
-| **False positive rate on clean graphs** | Run the agent on a deliberately well-formed graph snapshot. Any finding is a false positive. Catches over-triggering. |
-| **Run-to-run stability** | Run the agent twice on the same graph state; diff the findings. LLMs are non-deterministic — instability here means users see different issues on repeated runs, which erodes trust. |
-| **Severity calibration** | Do findings marked `high` severity actually matter more to a human reviewer than `low` ones? Requires periodic human spot-checks; track agreement rate. |
-| **Cross-node detection rate** | Reduce-phase recall only: `cross_node_issues_found / cross_node_issues_in_manifest`. Isolates whether the aggregation step is doing useful work beyond the per-node scan. |
-| **Actionability rate** | Fraction of reported issues the user acted on (edited or acknowledged in the UI). Observable from `log.md`. A low rate means findings are too vague or unfixable — a prompt quality signal. |
-
----
-
-### Shared Considerations
-
-**Running evals:** Each eval run calls the agent endpoint against a fixture, compares the output to the gold manifest, and writes a score file. This can be a standalone Python script (`evals/run_evals.py`) that reads fixtures from `evals/fixtures/` and prints a summary table. No eval framework required at this scale.
-
-**LLM-as-judge for subjective dimensions:** For edit rate and actionability, you can also prompt a second LLM call to judge whether a proposal is "high quality" against the source text. Useful for bulk scoring when human review is too slow, but treat it as a noisy signal.
-
-**Thresholds (suggested starting points):**
-
-| Agent | Metric | Target |
-|---|---|---|
-| Ingest | Node recall | ≥ 0.80 |
-| Ingest | Node precision | ≥ 0.75 |
-| Ingest | Schema compliance | ≥ 0.95 |
-| Lint | Issue recall | ≥ 0.75 |
-| Lint | False positive rate (clean graph) | 0 |
-| Lint | Run-to-run stability | ≥ 0.90 agreement |
-
-These are guardrails, not goals — adjust as you accumulate real-world data from `log.md`.
+- A finding is genuine if it maps to an entry in the manifest, or if a human reviewer confirms it on a clean fixture.
