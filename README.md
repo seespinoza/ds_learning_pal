@@ -130,8 +130,9 @@ Build order:
 2. CRUD routers (nodes, relationships, sources, wiki)
 3. JWT auth with `admin` / `viewer` roles
 4. Ingest and lint agents (LangGraph + Anthropic)
-5. React/Vite frontend
-6. Local dev wiring (`.env`, run order)
+5. Eval suite (`evals/run_evals.py` + fixtures)
+6. React/Vite frontend
+7. Local dev wiring (`.env`, run order)
 
 **Phase 2 — Cloud Migration**
 
@@ -142,6 +143,6 @@ No application code changes — only environment variables swap:
 - FastAPI → Cloud Run or Azure Container Apps
 - React → Firebase Hosting or Azure Static Web Apps
 
-GitHub Actions adds CI (ruff + pytest + eslint on PRs) and CD (deploy on merge to `main`).
+GitHub Actions adds CI (ruff + pytest + eslint + eval suite on PRs) and CD (deploy on merge to `main`).
 
 → [Implementation Plan](docs/implementation.md)
