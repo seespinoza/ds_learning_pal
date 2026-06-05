@@ -1,0 +1,10 @@
+{
+  "issues": [
+    {
+      "type": "orphan",
+      "node": "Bias-Variance Tradeoff",
+      "severity": "warning",
+      "detail": "Node has no relationships"
+    }
+  ]
+}

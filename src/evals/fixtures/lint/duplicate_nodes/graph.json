@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {"label": "Algorithm", "name": "Gradient Descent", "summary": "Iterative optimization algorithm minimizing a loss function."},
+    {"label": "Algorithm", "name": "Gradient Descent Algorithm", "summary": "An optimization method that follows the negative gradient of the loss."},
+    {"label": "Concept", "name": "Loss Function", "summary": "A function measuring prediction error."},
+    {"label": "Domain", "name": "Machine Learning", "summary": "Field of AI."}
+  ],
+  "relationships": [
+    {"from": "Gradient Descent", "to": "Loss Function", "type": "USED_ON", "confidence": "high", "justification": "GD operates on the loss.", "date_added": "2025-01-01"},
+    {"from": "Gradient Descent Algorithm", "to": "Machine Learning", "type": "BELONGS_TO", "confidence": "low", "justification": "Possibly duplicate node.", "date_added": "2025-01-02"}
+  ],
+  "_injected_defects": [
+    "Gradient Descent and Gradient Descent Algorithm are duplicates of the same concept",
+    "confidence=low on Gradient Descent Algorithm BELONGS_TO edge is unresolved"
+  ]
+}

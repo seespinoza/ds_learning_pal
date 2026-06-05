@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {"label": "Algorithm", "name": "Gradient Descent"},
+    {"label": "Algorithm", "name": "Stochastic Gradient Descent"},
+    {"label": "Algorithm", "name": "Adam"},
+    {"label": "Concept", "name": "Loss Function"},
+    {"label": "Domain", "name": "Machine Learning"}
+  ],
+  "relationships": [
+    {"from": "Gradient Descent", "to": "Loss Function", "type": "USED_ON"},
+    {"from": "Gradient Descent", "to": "Machine Learning", "type": "BELONGS_TO"},
+    {"from": "Stochastic Gradient Descent", "to": "Gradient Descent", "type": "INSTANCE_OF"}
+  ]
+}

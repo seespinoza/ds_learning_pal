@@ -1,8 +1,26 @@
 # Implementation
 
-## Phase 1 — Local Standup
+## Phase 1 — Local Standup ✓ Complete
 
 Everything runs on your machine. The only external dependency is the Anthropic API key. Goal is a fully functional app — graph CRUD, both agents, and the React UI — before touching any cloud infrastructure.
+
+**Status:** Implemented. Source tree lives under `src/`:
+
+```
+src/
+  backend/          FastAPI app (main.py, routers/, db/, agents/, auth/)
+  frontend/         React + Vite + Tailwind (npm project)
+  evals/            Eval runner + 4 fixtures (2 ingest, 2 lint)
+  wiki/             index.md and log.md (runtime-written)
+```
+
+**First-run setup:**
+1. Copy `.env.example` → `.env` and fill in all values
+2. Generate JWT secret: `openssl rand -hex 32`
+3. Start Neo4j Desktop + `sudo systemctl start mongod`
+4. `PYTHONPATH=src uvicorn backend.main:app --reload` (from project root)
+5. Create your first admin user: `POST /auth/register` with `{"username": "...", "password": "...", "role": "admin"}`
+6. `cd src/frontend && npm install && npm run dev`
 
 ### Prerequisites
 

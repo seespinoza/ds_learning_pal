@@ -1,0 +1,15 @@
+Regularization is a set of techniques used to prevent overfitting in machine learning models
+by adding a penalty term to the loss function that discourages overly complex models.
+
+Common techniques:
+- L1 Regularization (Lasso): adds the sum of absolute values of weights (λ * Σ|w|).
+  Produces sparse solutions; can zero out irrelevant features.
+- L2 Regularization (Ridge): adds the sum of squared weights (λ * Σw²).
+  Penalizes large weights but doesn't zero them out.
+- Elastic Net: combines L1 and L2 penalties.
+- Dropout: randomly zeros activations during training; specific to neural networks.
+
+Regularization addresses the problem of overfitting.
+L1 and L2 regularization are instances of the general Regularization concept.
+Regularization is a Technique belonging to the Machine Learning domain.
+It is part of the Model Training process.

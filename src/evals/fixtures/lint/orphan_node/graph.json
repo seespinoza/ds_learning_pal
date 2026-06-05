@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    {"label": "Algorithm", "name": "K-Means", "summary": "Clustering algorithm that partitions data into k clusters."},
+    {"label": "Domain", "name": "Machine Learning", "summary": "Field of AI focused on learning from data."},
+    {"label": "Concept", "name": "Bias-Variance Tradeoff", "summary": "The tension between underfitting and overfitting."}
+  ],
+  "relationships": [
+    {"from": "K-Means", "to": "Machine Learning", "type": "BELONGS_TO", "confidence": "high", "justification": "K-Means is an ML algorithm.", "date_added": "2025-01-01"}
+  ],
+  "_injected_defects": [
+    "Bias-Variance Tradeoff has no relationships (orphan node)"
+  ]
+}

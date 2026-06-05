@@ -1,0 +1,16 @@
+Gradient Descent is an iterative optimization algorithm used to minimize a loss function
+by updating model parameters in the direction of the negative gradient.
+
+It is a core algorithm in machine learning and deep learning. The basic update rule is:
+    θ = θ - α * ∇L(θ)
+where α is the learning rate and ∇L is the gradient of the loss.
+
+Variants include:
+- Stochastic Gradient Descent (SGD): updates on a single sample at a time
+- Mini-batch Gradient Descent: updates on a small batch of samples
+- Adam: adaptive learning rate optimizer that combines momentum and RMSProp
+
+Gradient Descent is used on Loss Functions to compute parameter updates.
+It belongs to the domain of Machine Learning and is a subclass of Optimization algorithms.
+
+Problems it addresses: slow convergence, getting stuck in local minima (partially, via momentum).

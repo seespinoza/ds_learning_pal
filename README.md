@@ -121,18 +121,31 @@ Agents run server-side inside the FastAPI process, invoked through `/ingest` and
 
 ## Implementation Plan
 
-**Phase 1 — Local Standup**
+**Phase 1 — Local Standup ✓ Complete**
 
-Bring up the full application on local hardware. The only external dependency is an Anthropic API key.
+Source lives under `src/`. Copy `.env.example` → `.env`, fill in secrets, then:
 
-Build order:
-1. Database connection helpers (Neo4j + MongoDB)
-2. CRUD routers (nodes, relationships, sources, wiki)
-3. JWT auth with `admin` / `viewer` roles
-4. Ingest and lint agents (LangGraph + Anthropic)
-5. Eval suite (`evals/run_evals.py` + fixtures)
-6. React/Vite frontend
-7. Local dev wiring (`.env`, run order)
+```bash
+# 1. Start databases
+sudo systemctl start mongod   # MongoDB
+# Start Neo4j Desktop and open your local database
+
+# 2. Backend
+PYTHONPATH=src uvicorn backend.main:app --reload
+
+# 3. Create first admin account (one-time, while no users exist)
+curl -X POST http://localhost:8000/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"changeme","role":"admin"}'
+
+# 4. Frontend
+cd src/frontend && npm install && npm run dev
+
+# 5. Evals (optional, requires backend running + JWT token)
+python src/evals/run_evals.py --token <your-jwt>
+```
+
+Stack: FastAPI + Neo4j + MongoDB + LangGraph + Claude Haiku 4.5 + React/Vite/Tailwind.
 
 **Phase 2 — Cloud Migration**
 

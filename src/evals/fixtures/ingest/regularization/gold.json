@@ -1,0 +1,18 @@
+{
+  "nodes": [
+    {"label": "Technique", "name": "Regularization"},
+    {"label": "Technique", "name": "L1 Regularization"},
+    {"label": "Technique", "name": "L2 Regularization"},
+    {"label": "Technique", "name": "Dropout"},
+    {"label": "Concept", "name": "Overfitting"},
+    {"label": "Domain", "name": "Machine Learning"},
+    {"label": "Technique", "name": "Model Training"}
+  ],
+  "relationships": [
+    {"from": "Regularization", "to": "Overfitting", "type": "ADDRESSES"},
+    {"from": "Regularization", "to": "Machine Learning", "type": "BELONGS_TO"},
+    {"from": "Regularization", "to": "Model Training", "type": "PART_OF"},
+    {"from": "L1 Regularization", "to": "Regularization", "type": "INSTANCE_OF"},
+    {"from": "L2 Regularization", "to": "Regularization", "type": "INSTANCE_OF"}
+  ]
+}

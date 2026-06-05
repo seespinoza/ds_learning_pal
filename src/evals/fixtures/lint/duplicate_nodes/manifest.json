@@ -1,0 +1,16 @@
+{
+  "issues": [
+    {
+      "type": "duplicate",
+      "nodes": ["Gradient Descent", "Gradient Descent Algorithm"],
+      "severity": "error",
+      "detail": "Same concept under two different node names"
+    },
+    {
+      "type": "stale_confidence",
+      "node": "Gradient Descent Algorithm",
+      "severity": "warning",
+      "detail": "Unresolved confidence=low on BELONGS_TO edge"
+    }
+  ]
+}
