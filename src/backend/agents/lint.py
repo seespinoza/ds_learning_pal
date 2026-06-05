@@ -15,10 +15,45 @@ from langgraph.graph.message import add_messages
 from backend.config import settings
 
 _SCHEMA = """\
-Node labels: Domain, Concept, Algorithm, Model, Technique, Tool, Platform.
-Relationship types: SUBCLASS_OF, INSTANCE_OF, BELONGS_TO, ADDRESSES, PART_OF, USED_ON.
-BELONGS_TO target must be a Domain node.
-Hierarchical relationships (SUBCLASS_OF, INSTANCE_OF, BELONGS_TO) must not form cycles.
+## Node Labels
+
+- Domain    — Top-level field or discipline
+- Concept   — Theoretical construct, phenomenon, or framework
+- Algorithm — Step-by-step computational procedure
+- Model     — Statistical or ML model family
+- Technique — Analytical approach, paradigm, or operational procedure
+- Tool      — Programming language, library, or framework
+- Platform  — Infrastructure, database, or cloud service
+
+## Relationship Decision Rules
+
+SUBCLASS_OF (A → B): A is a more specific *category* of B. Both nodes share the same or compatible label.
+  Violation if: A is a specific named instance rather than a subtype (use INSTANCE_OF instead).
+  Example: Supervised Learning --[SUBCLASS_OF]--> Machine Learning
+
+INSTANCE_OF (A → B): A is a specific *member* of class B. A is an individual; B is a grouping.
+  Violation if: A is a subtype/category rather than a concrete example.
+  Example: Ridge Regression --[INSTANCE_OF]--> Linear Regression
+
+BELONGS_TO (A → B): A is situated within a field or discipline. B MUST be a Domain node.
+  Violation if: B is not labeled Domain.
+  Example: Eigendecomposition --[BELONGS_TO]--> Linear Algebra
+
+PART_OF (A → B): A is a structural or procedural component of B.
+  Violation if: A is not genuinely required for B to function.
+  Example: Loss Function --[PART_OF]--> Model Training
+
+ADDRESSES (A → B): A is a solution or mitigation for B. B must be a problem or failure mode.
+  Violation if: B is not a problem/phenomenon (e.g. ADDRESSES pointing at an algorithm is wrong).
+  Example: Regularization --[ADDRESSES]--> Overfitting
+
+USED_ON (A → B): A operates on B as its direct input or target.
+  Violation if: A is not an algorithm/process, or B is not what A directly acts upon.
+  Example: Gradient Descent --[USED_ON]--> Loss Function
+
+## Hierarchy Constraints
+- SUBCLASS_OF, INSTANCE_OF, and BELONGS_TO must not form cycles.
+- BELONGS_TO target must always be a Domain node — any other target is a schema violation.
 """
 
 _NODE_CHECK_PROMPT = """\
