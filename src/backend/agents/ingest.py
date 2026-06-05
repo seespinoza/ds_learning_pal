@@ -1,39 +1,78 @@
 """
-Ingest agent: parse → extract → deduplicate → propose.
+Ingest agent: parse → extract → propose.
 
 Returns a ProposalPayload without writing to Neo4j.
 Writing happens only after the user confirms via POST /ingest/confirm.
 """
 import json
-import os
-from typing import Annotated, TypedDict
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import END, StateGraph
-from langgraph.graph.message import add_messages
+from langchain_core.messages import HumanMessage
 
 from backend.agents.tools import read_ocr, read_pdf, read_website
 from backend.config import settings
 
 _SCHEMA = """\
-Node labels: Domain, Concept, Algorithm, Model, Technique, Tool, Platform.
-Relationship types: SUBCLASS_OF, INSTANCE_OF, BELONGS_TO, ADDRESSES, PART_OF, USED_ON.
-Relationship properties: justification (str), confidence (high|medium|low), date_added (ISO date).
-Node properties: summary, aliases (list), raw_sources (list), notes, courses (list), videos (list), docs (list), references (list).
+## Node Labels
+
+- Domain    — Top-level field or discipline (e.g. Machine Learning, Linear Algebra, Statistics)
+- Concept   — Theoretical construct, phenomenon, or framework (e.g. Overfitting, Bias-Variance Tradeoff)
+- Algorithm — Step-by-step computational procedure (e.g. Gradient Descent, PCA, k-means)
+- Model     — Statistical or ML model family (e.g. Linear Regression, Random Forest)
+- Technique — Analytical approach, paradigm, or operational procedure (e.g. Cross-Validation, Fine-tuning, RAG)
+- Tool      — Programming language, library, or framework (e.g. Python, PyTorch, scikit-learn)
+- Platform  — Infrastructure, database, or cloud service (e.g. AWS, PostgreSQL, Docker)
+
+## Relationship Types and Decision Rules
+
+SUBCLASS_OF (A → B): A is a more specific category of B. Both share the same or compatible label.
+  Ask: "Is A a more specific *type* of B?" (not a member, not a discipline)
+  Example: Supervised Learning --[SUBCLASS_OF]--> Machine Learning
+
+INSTANCE_OF (A → B): A is a specific member of class B. A is an individual; B is a grouping.
+  Ask: "Is A a specific *example* of B?" (not a subtype)
+  Example: Ridge Regression --[INSTANCE_OF]--> Linear Regression
+  Note: Adam is INSTANCE_OF Optimizer, not SUBCLASS_OF. Use this when A is a concrete named thing.
+
+BELONGS_TO (A → B): A is situated within a field or discipline. B MUST be a Domain node — hard constraint.
+  Ask: "Is B a subject area, not a type or class?"
+  Example: Eigendecomposition --[BELONGS_TO]--> Linear Algebra
+
+PART_OF (A → B): A is a structural or procedural component of B. Removing A makes B incomplete.
+  Ask: "Would removing A make B incomplete?"
+  Example: Loss Function --[PART_OF]--> Model Training
+
+ADDRESSES (A → B): A is a solution or mitigation for B. B is a problem, phenomenon, or failure mode.
+  Ask: "Does A solve or mitigate B?"
+  Example: Regularization --[ADDRESSES]--> Overfitting
+
+USED_ON (A → B): A operates on B directly. A is an algorithm or process; B is what it acts upon.
+  Ask: "Does A take B as its direct input or target?"
+  Example: Gradient Descent --[USED_ON]--> Loss Function
+
+## Relationship Properties
+
+- justification: short explanation of why this relationship holds
+- confidence: high | medium | low  (use low when uncertain; lint will flag it)
+- date_added: ISO date (leave empty; backend sets this on write)
+
+## Node Properties
+
+- summary: concise description (1-3 sentences)
+- aliases: list of other names this concept is known by
+- raw_sources: leave empty (backend fills this from the uploaded source)
 """
 
 _EXTRACT_PROMPT = """\
 You are a knowledge graph builder for data science, ML, and AI engineering concepts.
-Given the following content, extract all relevant nodes and relationships.
+Extract all relevant nodes and relationships from the content below.
 
-Graph schema:
 {schema}
 
-Existing nodes (do not duplicate):
+Existing nodes (do not create duplicates — reuse exact names if an entity already exists):
 {index}
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON in this exact format, with no markdown fences:
 {{
   "nodes": [
     {{"label": "<label>", "name": "<name>", "summary": "<summary>", "aliases": [], "raw_sources": []}}
@@ -48,15 +87,6 @@ Content to extract from:
 """
 
 
-class IngestState(TypedDict):
-    input_type: str          # "pdf" | "url" | "image" | "text"
-    input_value: str         # file path or raw text
-    index_content: str       # current index.md content
-    parsed_content: str
-    proposal: dict           # nodes + relationships
-    messages: Annotated[list, add_messages]
-
-
 def _llm():
     return ChatAnthropic(
         model="claude-haiku-4-5-20251001",
@@ -65,56 +95,32 @@ def _llm():
     )
 
 
-def parse_node(state: IngestState) -> IngestState:
-    input_type = state["input_type"]
-    val = state["input_value"]
-
+def _parse(input_type: str, input_value: str) -> str:
     if input_type == "pdf":
-        content = read_pdf.invoke({"file_path": val})
-    elif input_type == "url":
-        content = read_website.invoke({"url": val})
-    elif input_type == "image":
-        content = read_ocr.invoke({"file_path": val})
-    else:
-        content = val
-
-    return {**state, "parsed_content": content}
+        return read_pdf.invoke({"file_path": input_value})
+    if input_type == "url":
+        return read_website.invoke({"url": input_value})
+    if input_type == "image":
+        return read_ocr.invoke({"file_path": input_value})
+    return input_value
 
 
-def extract_node(state: IngestState) -> IngestState:
+def _extract(content: str, index_content: str) -> dict:
     prompt = _EXTRACT_PROMPT.format(
         schema=_SCHEMA,
-        index=state["index_content"] or "(empty — this is the first ingest)",
-        content=state["parsed_content"][:12000],
+        index=index_content or "(empty — this is the first ingest)",
+        content=content[:12000],
     )
-    llm = _llm()
-    response = llm.invoke([HumanMessage(content=prompt)])
+    response = _llm().invoke([HumanMessage(content=prompt)])
     raw = response.content
-
     try:
-        # Strip markdown code fences if present
         if "```" in raw:
             raw = raw.split("```")[1]
             if raw.startswith("json"):
                 raw = raw[4:]
-        proposal = json.loads(raw.strip())
+        return json.loads(raw.strip())
     except Exception:
-        proposal = {"nodes": [], "relationships": [], "parse_error": raw}
-
-    return {**state, "proposal": proposal}
-
-
-def build_ingest_graph() -> StateGraph:
-    g = StateGraph(IngestState)
-    g.add_node("parse", parse_node)
-    g.add_node("extract", extract_node)
-    g.set_entry_point("parse")
-    g.add_edge("parse", "extract")
-    g.add_edge("extract", END)
-    return g.compile()
-
-
-_graph = build_ingest_graph()
+        return {"nodes": [], "relationships": [], "parse_error": raw}
 
 
 async def run_ingest(
@@ -123,12 +129,5 @@ async def run_ingest(
     index_content: str = "",
 ) -> dict:
     """Run the ingest pipeline and return the proposal payload."""
-    result = await _graph.ainvoke({
-        "input_type": input_type,
-        "input_value": input_value,
-        "index_content": index_content,
-        "parsed_content": "",
-        "proposal": {},
-        "messages": [],
-    })
-    return result["proposal"]
+    content = _parse(input_type, input_value)
+    return _extract(content, index_content)
