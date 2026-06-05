@@ -45,6 +45,8 @@ Web UI for human users. Two main views:
 
 Agent processes run server-side within the FastAPI process, invoked through the `/ingest` and `/lint` endpoints. See `agent.md`.
 
+**Evals** run as a separate dev-time harness — not part of the production app. The eval runner (`evals/run_evals.py`) calls the same `/ingest` and `/lint` endpoints against fixture inputs, compares outputs to gold manifests, and prints a score table. Fixtures and gold manifests live in `evals/fixtures/` alongside the source code.
+
 ---
 
 ## Data Flow
@@ -63,3 +65,6 @@ User triggers lint → `POST /lint` → Lint Agent scans nodes → lint report a
 
 **Lint (scheduled):**
 System cron job calls `curl -X POST http://localhost:8000/lint` on a schedule (e.g. weekly). No additional libraries needed — cron is a Unix system daemon configured via a one-line crontab entry.
+
+**Eval run:**
+Developer runs `python evals/run_evals.py` → script calls `/ingest` or `/lint` with fixture inputs → compares agent output against gold manifest JSON → prints recall/precision scores per agent.

@@ -123,7 +123,44 @@ backend/
 
 ---
 
-### 5. Frontend — React + Vite
+### 5. Evals
+
+**Directory layout:**
+```
+evals/
+  run_evals.py          # runner — calls endpoints, scores output, prints table
+  fixtures/
+    ingest/
+      <fixture-name>/
+        input.pdf       # or input.txt / input.url
+        gold.json       # expected nodes and relationships
+    lint/
+      <fixture-name>/
+        graph.json      # Neo4j dump with injected defects
+        manifest.json   # list of expected issues (node ref, type, severity)
+```
+
+**Gold set format (`gold.json` for ingest):**
+```json
+{
+  "nodes": [
+    { "label": "Concept", "name": "Gradient Descent" }
+  ],
+  "relationships": [
+    { "from": "Gradient Descent", "to": "Optimization", "type": "SUBCLASS_OF" }
+  ]
+}
+```
+
+**Running evals locally:**
+1. Start the backend (`uvicorn backend.main:app --reload`)
+2. `python evals/run_evals.py` — prints a table of recall/precision per fixture and agent
+
+Build at least two fixtures per agent before considering the baseline stable. A node counts as correct if its label and name match the gold entry; exact property equality is too strict for LLM output.
+
+---
+
+### 6. Frontend — React + Vite
 
 **Scaffold:** `npm create vite@latest frontend -- --template react`
 
@@ -145,7 +182,7 @@ backend/
 
 ---
 
-### 6. Local Dev Wiring
+### 7. Local Dev Wiring
 
 `.env` at project root (never committed):
 ```
@@ -197,6 +234,7 @@ Two workflows:
 **`ci.yml`** — runs on every PR:
 - `ruff` lint + `pytest` for backend
 - `eslint` + `npm run build` for frontend
+- `python evals/run_evals.py` — runs the eval suite against the agent endpoints; fails the build if recall or precision drops below threshold. Requires `ANTHROPIC_API_KEY` stored as a GitHub Actions secret. Note: each eval run makes real API calls — keep the fixture set small enough that the cost per CI run is acceptable.
 
 **`deploy.yml`** — runs on merge to `main`:
 - Triggers Render/Railway redeploy via deploy hook URL
