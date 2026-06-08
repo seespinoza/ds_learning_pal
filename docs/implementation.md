@@ -27,7 +27,7 @@ src/
 | Requirement | Notes |
 |---|---|
 | Neo4j Community | Install via RPM repo (`dnf install neo4j`); runs as a system service; browser UI available at `localhost:7474` |
-| MongoDB Community | Install via package manager (e.g. `dnf install mongodb-org` on Fedora); runs as a system service |
+| MongoDB Community 7.0 | Install via package manager (e.g. `dnf install mongodb-org` from the 7.0 repo on Fedora); 8.x incompatible with Linux kernel 6.19+ |
 | Python 3.11+ | Backend and agents |
 | Node.js 20+ | React frontend |
 | Anthropic API key | Set as env var `ANTHROPIC_API_KEY` |

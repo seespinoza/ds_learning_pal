@@ -174,7 +174,7 @@ GitHub Actions adds CI (ruff + pytest + eslint + eval suite on PRs) and CD (depl
 | Requirement | Version | Notes |
 |---|---|---|
 | Neo4j Community | 5.x | Installed via `dnf` — see install note below |
-| MongoDB Community | 8.0+ | Not in default Fedora repos — see install note below |
+| MongoDB Community | 7.0 | Not in default Fedora repos — see install note below; 8.x incompatible with Linux kernel 6.19+ |
 | Python | 3.11+ | Backend and agents |
 | Node.js | 20+ | React frontend |
 | Anthropic API key | — | Set as `ANTHROPIC_API_KEY` in `.env` |
@@ -200,16 +200,16 @@ sudo neo4j-admin dbms set-initial-password yourpassword
 sudo systemctl enable --now neo4j
 ```
 
-**MongoDB on Fedora** — add the official repo first:
+**MongoDB on Fedora** — use 7.0; MongoDB 8.x does not start on Linux kernel 6.19+:
 
 ```bash
-sudo tee /etc/yum.repos.d/mongodb-org-8.0.repo << 'EOF'
-[mongodb-org-8.0]
+sudo tee /etc/yum.repos.d/mongodb-org-7.0.repo << 'EOF'
+[mongodb-org-7.0]
 name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
+baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/7.0/x86_64/
 gpgcheck=1
 enabled=1
-gpgkey=https://pgp.mongodb.com/server-8.0.asc
+gpgkey=https://pgp.mongodb.com/server-7.0.asc
 EOF
 sudo dnf install -y mongodb-org
 sudo systemctl enable --now mongod
