@@ -81,21 +81,25 @@ Two special files help navigation as the wiki scales:
 
 ## Agent Architecture
 
-Two LangGraph agents power the system, both backed by Claude Haiku 4.5 via the Anthropic API.
+Both agents are backed by Claude Haiku 4.5 via the Anthropic API.
 
 **Ingest Agent** — triggered by `POST /ingest` with a file path or prompt:
 
 1. Parse the input (PDF, URL, image, or plain text)
-2. Extract candidate nodes and relationships
+2. Extract candidate nodes and relationships (schema + decision rules injected into prompt)
 3. Deduplicate against `index.md`
 4. Return proposals to the UI for human review
 5. Write confirmed proposals to Neo4j; update `index.md` and `log.md`
 
+Linear pipeline — implemented as plain async functions, no graph framework needed.
+
 **Lint Agent** — triggered by `POST /lint` on demand or via cron:
 
-1. Map phase: for each node, fetch from Neo4j and check internal consistency and relationship validity
+1. Map phase: for each node, check internal consistency and relationship validity against schema rules
 2. Reduce phase: cross-node pass for contradictions, orphans, and duplicates
 3. Return a structured report — issues only, no auto-fixes
+
+Map-reduce structure implemented with LangGraph `StateGraph`.
 
 Shared tools cover PDF extraction (`pypdf`), website-to-markdown conversion (`r.jina.ai`), and OCR (`easyocr`).
 
@@ -145,7 +149,7 @@ cd src/frontend && npm install && npm run dev
 python src/evals/run_evals.py --token <your-jwt>
 ```
 
-Stack: FastAPI + Neo4j + MongoDB + LangGraph + Claude Haiku 4.5 + React/Vite/Tailwind.
+Stack: FastAPI + Neo4j + MongoDB + LangGraph (lint) + Claude Haiku 4.5 + React/Vite/Tailwind.
 
 **Phase 2 — Cloud Migration**
 
