@@ -132,7 +132,7 @@ Source lives under `src/`. Copy `.env.example` → `.env`, fill in secrets, then
 ```bash
 # 1. Start databases
 sudo systemctl start mongod   # MongoDB
-# Start Neo4j Desktop and open your local database
+sudo systemctl start neo4j    # Neo4j
 
 # 2. Backend
 PYTHONPATH=src uvicorn backend.main:app --reload
@@ -172,11 +172,32 @@ GitHub Actions adds CI (ruff + pytest + eslint + eval suite on PRs) and CD (depl
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Neo4j Desktop | latest | Installer at [neo4j.com/download](https://neo4j.com/download); create a local database and note the password |
+| Neo4j Community | 5.x | Installed via `dnf` — see install note below |
 | MongoDB Community | 8.0+ | Not in default Fedora repos — see install note below |
 | Python | 3.11+ | Backend and agents |
 | Node.js | 20+ | React frontend |
 | Anthropic API key | — | Set as `ANTHROPIC_API_KEY` in `.env` |
+
+**Neo4j on Fedora** — add the official RPM repo:
+
+```bash
+sudo rpm --import https://yum.neo4j.com/neotechnology.gpg.key
+sudo tee /etc/yum.repos.d/neo4j.repo << 'EOF'
+[neo4j]
+name=Neo4j RPM Repository
+baseurl=https://yum.neo4j.com/stable/
+enabled=1
+gpgcheck=1
+EOF
+sudo dnf install -y neo4j
+sudo systemctl enable --now neo4j
+```
+
+Set the initial password (default is `neo4j`/`neo4j`):
+
+```bash
+cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'yourpassword';"
+```
 
 **MongoDB on Fedora** — add the official repo first:
 
@@ -190,7 +211,7 @@ enabled=1
 gpgkey=https://pgp.mongodb.com/server-8.0.asc
 EOF
 sudo dnf install -y mongodb-org
-sudo systemctl enable mongod
+sudo systemctl enable --now mongod
 ```
 
 ### 1. Clone and configure environment

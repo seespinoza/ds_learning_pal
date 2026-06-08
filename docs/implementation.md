@@ -17,7 +17,7 @@ src/
 **First-run setup:**
 1. Copy `.env.example` → `.env` and fill in all values
 2. Generate JWT secret: `openssl rand -hex 32`
-3. Start Neo4j Desktop + `sudo systemctl start mongod`
+3. `sudo systemctl start neo4j && sudo systemctl start mongod`
 4. `PYTHONPATH=src uvicorn backend.main:app --reload` (from project root)
 5. Create your first admin user: `POST /auth/register` with `{"username": "...", "password": "...", "role": "admin"}`
 6. `cd src/frontend && npm install && npm run dev`
@@ -26,7 +26,7 @@ src/
 
 | Requirement | Notes |
 |---|---|
-| Neo4j Desktop | Installer at neo4j.com/download; includes browser UI at `localhost:7474` |
+| Neo4j Community | Install via RPM repo (`dnf install neo4j`); runs as a system service; browser UI available at `localhost:7474` |
 | MongoDB Community | Install via package manager (e.g. `dnf install mongodb-org` on Fedora); runs as a system service |
 | Python 3.11+ | Backend and agents |
 | Node.js 20+ | React frontend |
@@ -36,7 +36,7 @@ src/
 
 ### 1. Infrastructure
 
-Start Neo4j Desktop and create a local database. Start the MongoDB service (`sudo systemctl start mongod`). Both run natively — no containers needed in this phase.
+Start both database services (`sudo systemctl start neo4j && sudo systemctl start mongod`). Both run natively as system services — no containers needed in this phase.
 
 ---
 
@@ -219,7 +219,7 @@ MONGO_URI=mongodb://localhost:27017
 ```
 
 Run order:
-1. Start Neo4j Desktop database + `sudo systemctl start mongod`
+1. `sudo systemctl start neo4j && sudo systemctl start mongod`
 2. `uvicorn backend.main:app --reload`
 3. `npm run dev` (from `frontend/`)
 
