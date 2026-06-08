@@ -163,3 +163,70 @@ No application code changes — only environment variables swap:
 GitHub Actions adds CI (ruff + pytest + eslint + eval suite on PRs) and CD (deploy on merge to `main`).
 
 → [Implementation Plan](docs/implementation.md)
+
+---
+
+## Setup
+
+### Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Neo4j Desktop | latest | Installer at [neo4j.com/download](https://neo4j.com/download); create a local database and note the password |
+| MongoDB Community | 8.0+ | Not in default Fedora repos — see install note below |
+| Python | 3.11+ | Backend and agents |
+| Node.js | 20+ | React frontend |
+| Anthropic API key | — | Set as `ANTHROPIC_API_KEY` in `.env` |
+
+**MongoDB on Fedora** — add the official repo first:
+
+```bash
+sudo tee /etc/yum.repos.d/mongodb-org-8.0.repo << 'EOF'
+[mongodb-org-8.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/8.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://pgp.mongodb.com/server-8.0.asc
+EOF
+sudo dnf install -y mongodb-org
+sudo systemctl enable mongod
+```
+
+### 1. Clone and configure environment
+
+```bash
+cp .env.example .env
+```
+
+Fill in all values in `.env`:
+
+```
+ANTHROPIC_API_KEY=...
+NEO4J_URI=bolt://localhost:7687
+NEO4J_PASSWORD=<your Neo4j local database password>
+MONGO_URI=mongodb://localhost:27017
+JWT_SECRET_KEY=<generate with: openssl rand -hex 32>
+```
+
+### 2. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Install frontend dependencies
+
+```bash
+cd src/frontend && npm install
+```
+
+### 4. Create the first admin account
+
+Do this once, while the backend is running and no users exist yet:
+
+```bash
+curl -X POST http://localhost:8000/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"changeme","role":"admin"}'
+```
