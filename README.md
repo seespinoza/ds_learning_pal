@@ -181,22 +181,22 @@ GitHub Actions adds CI (ruff + pytest + eslint + eval suite on PRs) and CD (depl
 **Neo4j on Fedora** — add the official RPM repo:
 
 ```bash
-sudo rpm --import https://yum.neo4j.com/neotechnology.gpg.key
+sudo rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 sudo tee /etc/yum.repos.d/neo4j.repo << 'EOF'
 [neo4j]
 name=Neo4j RPM Repository
-baseurl=https://yum.neo4j.com/stable/
+baseurl=https://yum.neo4j.com/stable/latest
 enabled=1
 gpgcheck=1
 EOF
 sudo dnf install -y neo4j
-sudo systemctl enable --now neo4j
 ```
 
-Set the initial password (default is `neo4j`/`neo4j`):
+Set the password before first start:
 
 ```bash
-cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'yourpassword';"
+sudo neo4j-admin set-initial-password yourpassword
+sudo systemctl enable --now neo4j
 ```
 
 **MongoDB on Fedora** — add the official repo first:
