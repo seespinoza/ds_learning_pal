@@ -134,7 +134,8 @@ Source lives under `src/`. Copy `.env.example` → `.env`, fill in secrets, then
 sudo systemctl start mongod   # MongoDB
 sudo systemctl start neo4j    # Neo4j
 
-# 2. Backend
+# 2. Backend (activate venv first)
+source .venv/bin/activate
 PYTHONPATH=src uvicorn backend.main:app --reload
 
 # 3. Create first admin account (one-time, while no users exist)
@@ -145,7 +146,7 @@ curl -X POST http://localhost:8000/auth/register \
 # 4. Frontend
 cd src/frontend && npm install && npm run dev
 
-# 5. Evals (optional, requires backend running + JWT token)
+# 5. Evals (optional, requires backend running + JWT token; venv must be active)
 python src/evals/run_evals.py --token <your-jwt>
 ```
 
@@ -195,7 +196,7 @@ sudo dnf install -y neo4j
 Set the password before first start:
 
 ```bash
-sudo neo4j-admin set-initial-password yourpassword
+sudo neo4j-admin dbms set-initial-password yourpassword
 sudo systemctl enable --now neo4j
 ```
 
@@ -227,12 +228,14 @@ ANTHROPIC_API_KEY=...
 NEO4J_URI=bolt://localhost:7687
 NEO4J_PASSWORD=<your Neo4j local database password>
 MONGO_URI=mongodb://localhost:27017
-JWT_SECRET_KEY=<generate with: openssl rand -hex 32>
+JWT_SECRET_KEY=<output of: openssl rand -hex 32>
 ```
 
-### 2. Install Python dependencies
+### 2. Create virtual environment and install Python dependencies
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
