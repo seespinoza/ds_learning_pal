@@ -60,6 +60,7 @@ backend/
     ingest.py
     lint.py
     tools.py
+    prompts.py   # shared GRAPH_SCHEMA constant
   config.py        # env vars via pydantic-settings
 ```
 
@@ -118,7 +119,7 @@ backend/
 
 ---
 
-### 4. Agents — LangGraph + Anthropic
+### 4. Agents — LangChain + Anthropic
 
 **Shared tools** (`agents/tools.py`):
 
@@ -128,15 +129,22 @@ backend/
 | `read_website` | `httpx` call to `r.jina.ai/<url>` |
 | `read_ocr` | `easyocr` |
 
+**Shared schema** (`agents/prompts.py`):
+- Single `GRAPH_SCHEMA` constant imported by both agents
+- Contains node label definitions, relationship decision rules (`Ask:` / `Violation if:` framing), hierarchy constraints, and property descriptions
+- Source of truth for all LLM prompt context — edit here to change agent behavior globally
+
 **Ingest agent** (`agents/ingest.py`):
-- LangGraph `StateGraph` with linear steps: parse → extract → deduplicate → propose
-- Returns a proposal payload (nodes + relationships) to the FastAPI router
-- Router holds the payload; does **not** write to Neo4j until the `/ingest/confirm` endpoint is called with user-approved proposals
+- Plain async functions — no graph framework; the workflow is strictly linear (parse → extract) with no branching or looping
+- Uses `langchain-anthropic` (`ChatAnthropic`) for LLM calls
+- `_parse()` dispatches to the appropriate tool based on input type
+- `_extract()` sends `GRAPH_SCHEMA` + existing index + parsed content to the LLM, returns structured JSON proposal
+- Router holds the payload; does **not** write to Neo4j until `/ingest/confirm` is called with user-approved proposals
 
 **Lint agent** (`agents/lint.py`):
-- Fetches all entries from `index.md` via the wiki router
-- LangGraph loop: for each node, fetch from Neo4j → call LLM → collect findings
-- After loop, single LLM call over all findings for cross-node checks
+- LangGraph `StateGraph` — map-reduce structure justifies the framework: parallel per-node checks feed into a single cross-node reduce pass
+- Map phase: one LLM call per node, checks internal consistency and relationship validity against `GRAPH_SCHEMA`
+- Reduce phase: single LLM call over all per-node findings for cross-node issues (contradictions, orphans, duplicates, cycles)
 - Returns structured lint report; router appends it to `log.md`
 
 ---
